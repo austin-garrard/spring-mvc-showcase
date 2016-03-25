@@ -1,0 +1,1 @@
+web: java $JAVA_OPTS -jar build/libs/webapp-runner-7.0.57.2.jar --port $PORT  --expand-war build/libs/*.war
