@@ -1,8 +1,9 @@
 
+// buildscript:
+//  - details the dependencies needed to parse and compile the rest of this file.
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
     }
 
     dependencies {
@@ -11,42 +12,38 @@ buildscript {
 }
 
 configurations {
-    runtimeOnly
+    webappRunner
 }
 
-apply plugin: 'java'
-apply plugin: 'maven'
-apply plugin: 'war'
-apply plugin: 'com.bmuschko.tomcat'
+// plugins:
+//  - additional functionality needed for the build
+apply plugin: 'war' // for outputting war files
+apply plugin: 'com.bmuschko.tomcat' // for running the application on a tomcat server https://github.com/bmuschko/gradle-tomcat-plugin
 
+// generic gradle config variables
 group = 'org.springframework.samples'
 version = '1.0'
+description = """description"""
+sourceCompatibility = 1.8 // SDK level of source files
+targetCompatibility = 1.8 // SDK level of output files
+
+// variable used to name output war files
 war.baseName = 'war-base-name'
 
-description = """description"""
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-
+// where to find the dependencies listed below
 repositories {
-
     mavenCentral()
 }
+
+// https://docs.gradle.org/current/userguide/artifact_dependencies_tutorial.html
 dependencies {
-    compile(group: 'org.springframework', name: 'spring-context', version:'4.2.2.RELEASE') {
-        exclude(module: 'commons-logging')
-    }
+
+    // compile:
+    //  - "The dependencies required to compile the production source of the project."
     compile group: 'org.springframework', name: 'spring-webmvc', version:'4.2.2.RELEASE'
     compile group: 'org.aspectj', name: 'aspectjrt', version:'1.8.1'
     compile group: 'org.slf4j', name: 'slf4j-api', version:'1.7.12'
     compile group: 'javax.inject', name: 'javax.inject', version:'1'
-    compile(group: 'javax.servlet.jsp.jstl', name: 'jstl-api', version:'1.2') {
-        exclude(module: 'servlet-api')
-    }
-    compile(group: 'org.glassfish.web', name: 'jstl-impl', version:'1.2') {
-        exclude(module: 'servlet-api')
-    }
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version:'2.5.3'
     compile group: 'com.rometools', name: 'rome', version:'1.5.0'
     compile group: 'javax.validation', name: 'validation-api', version:'1.0.0.GA'
@@ -56,33 +53,56 @@ dependencies {
     compile group: 'commons-io', name: 'commons-io', version:'2.0.1'
     compile group: 'org.springframework.security', name: 'spring-security-web', version:'4.0.1.RELEASE'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.3.2'
+    compile(group: 'org.springframework', name: 'spring-context', version:'4.2.2.RELEASE') {
+        exclude(module: 'commons-logging')
+    }
+    compile(group: 'javax.servlet.jsp.jstl', name: 'jstl-api', version:'1.2') {
+        exclude(module: 'servlet-api')
+    }
+    compile(group: 'org.glassfish.web', name: 'jstl-impl', version:'1.2') {
+        exclude(module: 'servlet-api')
+    }
+
+    // runtime:
+    //  - "The dependencies required by the production classes at runtime. By default, also includes the compile time dependencies."
     runtime group: 'org.slf4j', name: 'jcl-over-slf4j', version:'1.7.12'
     runtime group: 'org.slf4j', name: 'slf4j-log4j12', version:'1.7.12'
     runtime group: 'log4j', name: 'log4j', version:'1.2.16'
+
+    // testCompile:
+    //  - "The dependencies required to compile the test source of the project. By default, also includes the compiled production classes and the compile time dependencies."
     testCompile group: 'org.springframework', name: 'spring-test', version:'4.2.2.RELEASE'
     testCompile group: 'junit', name: 'junit', version:'4.11'
     testCompile group: 'xmlunit', name: 'xmlunit', version:'1.2'
     testCompile group: 'com.jayway.jsonpath', name: 'json-path', version:'0.8.1'
     testCompile group: 'org.hamcrest', name: 'hamcrest-library', version:'1.3'
+
+    // providedCompile: (from the 'war' plugin)
+    //  - Same as compile, but these dependencies are not added to the war.
     providedCompile group: 'org.apache.tomcat', name: 'tomcat-servlet-api', version:'7.0.30'
     providedCompile group: 'javax.servlet.jsp', name: 'jsp-api', version:'2.1'
-    runtimeOnly 'com.github.jsimone:webapp-runner:7.0.57.2'
 
+    // webappRunner: (from the custom configuration declared above)
+    //  - This dependency is declared in its own configuration so that its contents can be specifically accessed by tasks (copyWebappRunnerToLib).
+    webappRunner 'com.github.jsimone:webapp-runner:7.0.57.2'
+
+    // tomcat configuration per com.bmuschko.tomcat's instructions
     def tomcatVersion = '7.0.59'
     tomcat "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}",
             "org.apache.tomcat.embed:tomcat-embed-logging-juli:${tomcatVersion}",
             "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}"
 }
 
-task copyToLib << {
-    copy {
-        from configurations.runtimeOnly.copy().setTransitive(false)
-        into "$buildDir/libs"
-    }
+// go go
+task localRun (description: 'Build and run the application locally', dependsOn: ['clean', 'war']) {
+    finalizedBy 'tomcatRunWar'
 }
 
-task run (description: 'Build and run the application', dependsOn: ['classes']) {
-    finalizedBy 'tomcatRun'
+// copies the webapp-runner to the build folder so that heroku can start the application
+task copyWebappRunnerToLib (type: Copy) {
+    from configurations.webappRunner.copy().setTransitive(false)
+    into "$buildDir/libs"
 }
 
-task stage(description: 'Used for heroku deployment', dependsOn:['clean', 'war', 'copyToLib'])
+// heroku deployment
+task stage(description: 'Used for heroku deployment', dependsOn:['clean', 'war', 'copyWebappRunnerToLib'])
