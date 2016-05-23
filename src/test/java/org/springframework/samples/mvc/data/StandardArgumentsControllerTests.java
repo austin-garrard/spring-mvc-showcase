@@ -1,5 +1,6 @@
 package org.springframework.samples.mvc.data;
 
+import static junit.framework.TestCase.assertEquals;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -23,6 +24,7 @@ public class StandardArgumentsControllerTests {
 
 	@Test
 	public void request() throws Exception {
+		assertEquals(true, false);
 		this.mockMvc.perform(get("/data/standard/request"))
 				.andExpect(content().string(startsWith(
 						"request = org.springframework.mock.web.MockHttpServletRequest@")));
